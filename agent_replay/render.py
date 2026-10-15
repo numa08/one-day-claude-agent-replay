@@ -1,0 +1,66 @@
+import html
+import json
+
+TEMPLATE = r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#656d76;--card:#f6f8fa;--bd:#d0d7de;--ac:#0969da;--err:#cf222e}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#8b949e;--card:#161b22;--bd:#30363d;--ac:#58a6ff;--err:#f85149}}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--bd);padding:10px 16px;z-index:2}
+h1{font-size:16px;margin:0 0 6px}
+.stats span{display:inline-block;margin-right:14px;color:var(--mut)}.stats b{color:var(--fg)}
+.ctl{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,button{font:inherit;padding:4px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
+button{cursor:pointer}button.on{border-color:var(--ac);color:var(--ac)}
+main{max-width:900px;margin:0 auto;padding:16px}
+.ev{border:1px solid var(--bd);border-left:4px solid var(--bd);background:var(--card);border-radius:6px;margin:10px 0;padding:8px 12px}
+.ev.user{border-left-color:#8250df}.ev.assistant{border-left-color:var(--ac)}.ev.thinking{border-left-color:var(--mut);opacity:.8}
+.ev.tool_use{border-left-color:#bf8700}.ev.tool_result{border-left-color:#1a7f37}.ev.error{border-left-color:var(--err)}
+.ev .h{color:var(--mut);font-size:12px;margin-bottom:4px}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font:12px/1.45 ui-monospace,monospace;max-height:320px;overflow:auto}
+.ev.error .h{color:var(--err)}.hide{display:none}mark{background:#bf870055;color:inherit}
+</style></head><body>
+<header><h1>__TITLE__</h1><div class="stats" id="stats"></div>
+<div class="ctl"><button id="play">▶ Play</button><input id="q" placeholder="Search…" size="24"><span id="filters"></span><span id="count" style="color:var(--mut)"></span></div></header>
+<main id="tl"></main>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D=JSON.parse(document.getElementById('data').textContent);
+const KINDS=['user','assistant','thinking','tool_use','tool_result'];
+const off=new Set();const tl=document.getElementById('tl');
+const S=D.stats,U=S.usage,n=x=>x.toLocaleString();
+document.getElementById('stats').innerHTML=
+ `<span><b>${n(S.events)}</b> events</span><span><b>${n(U.input+U.cache_read+U.cache_write)}</b> in</span><span><b>${n(U.output)}</b> out</span>`+
+ `<span>est. <b>$${S.cost_usd.toFixed(2)}</b>${S.cost_complete?'':'+'}</span><span><b>${S.errors}</b> errors</span><span>${S.models.join(', ')}</span>`+
+ `<span>${Object.entries(S.tools).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>k+'×'+v).join(' ')}</span>`;
+const els=D.events.map(e=>{const d=document.createElement('div');
+ d.className='ev '+e.kind+(e.error?' error':'');
+ const h=document.createElement('div');h.className='h';
+ h.textContent='#'+e.i+' '+e.kind+(e.tool?' · '+e.tool:'')+(e.error?' · ERROR':'')+(e.ts?' · '+e.ts:'');
+ const p=document.createElement('pre');p.textContent=e.text;
+ d.append(h,p);d._t=(e.kind+' '+(e.tool||'')+' '+e.text).toLowerCase();d._k=e.kind;tl.append(d);return d});
+const fl=document.getElementById('filters');
+KINDS.forEach(k=>{const b=document.createElement('button');b.textContent=k;b.className='on';
+ b.onclick=()=>{off.has(k)?off.delete(k):off.add(k);b.classList.toggle('on');apply()};fl.append(b)});
+const q=document.getElementById('q');q.oninput=apply;
+function apply(){const s=q.value.toLowerCase();let c=0;
+ els.forEach(d=>{const ok=!off.has(d._k)&&(!s||d._t.includes(s));d.classList.toggle('hide',!ok);c+=ok});
+ document.getElementById('count').textContent=c+' shown'}
+let timer=null;const pb=document.getElementById('play');
+pb.onclick=()=>{if(timer){clearInterval(timer);timer=null;pb.textContent='▶ Play';return}
+ els.forEach(d=>d.classList.add('hide'));let i=0;pb.textContent='⏸ Pause';
+ timer=setInterval(()=>{if(i>=els.length){clearInterval(timer);timer=null;pb.textContent='▶ Play';apply();return}
+  const d=els[i++];if(!off.has(d._k)){d.classList.remove('hide');d.scrollIntoView({block:'center',behavior:'smooth'})}},350)};
+apply();
+</script></body></html>
+"""
+
+
+def render_html(parsed, title="agent-replay"):
+    data = json.dumps(parsed, ensure_ascii=False)
+    # keep the JSON inert inside <script>: no "</", "<!--" breakouts
+    data = data.replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    return TEMPLATE.replace("__TITLE__", html.escape(title)).replace("__DATA__", data)

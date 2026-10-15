@@ -1,0 +1,12 @@
+logs/
+.env
+.env.*
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+# セッションログの HTML ビューア出力。examples/ 配下のサンプルは対象外
+/*.html
