@@ -11,7 +11,7 @@ Try it: open [`examples/sample.html`](examples/sample.html) (generated from `exa
 Python 3.9+, standard library only.
 
 ```sh
-pipx install git+https://github.com/numa08/one-day-claude   # or: pip install .
+pipx install git+https://github.com/numa08/one-day-claude-agent-replay   # or: pip install .
 # or run without installing:
 python -m agent_replay --latest
 ```
