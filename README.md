@@ -1,5 +1,7 @@
 # agent-replay
 
+English | [日本語](README.ja.md)
+
 Turn a Claude Code session log into a **single self-contained HTML file**: a searchable, replayable timeline of every prompt, thought, tool call and result — with token and cost totals. No dependencies, nothing leaves your machine.
 
 Try it: open [`examples/sample.html`](examples/sample.html) (generated from `examples/sample.jsonl`).
